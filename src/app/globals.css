@@ -9,7 +9,7 @@
   --Disable: #969998;
   --Outline: #E1E5E4;
   --Placeholder: #FFFFFF;
-  --Background: #F6F6F6;
+  --Background: #ffffff;
 
   /* Typography with clamp() for responsive design */
   --H1-size: clamp(2.2rem, 6vw, 5rem);       /* 40px - 80px */

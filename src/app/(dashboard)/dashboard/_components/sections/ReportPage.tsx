@@ -1,11 +1,11 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Editor } from "primereact/editor";
 import "primereact/resources/themes/lara-light-indigo/theme.css";
 import "primereact/resources/primereact.min.css";
 import { generateGRIReport } from "@/constants/griReportTemplate";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { postRequest } from "@/utils/api";
+import { getRequest, postRequest } from "@/utils/api";
 import { toast } from "react-hot-toast";
 import { generateIFRSReport } from "@/constants/ifrsReportTemplate";
 import { safeLocalStorage } from "@/utils/localStorage";
@@ -27,11 +27,11 @@ export default function ReportParagraph({
   viewMode,
 }: ReportProps) {
   const [editMode, setEditMode] = useState(false);
-  const [customText, setCustomText] = useState<string>(() =>
-    type === "GRI" ? generateGRIReport(data) : generateIFRSReport(data)
+  const [some, setSome] = useState({ companyName: "", reportingPeriod: "" });
+  const [customText, setCustomText] = useState<string>(''
   );
   const reportRef = useRef<HTMLDivElement>(null);
-
+console.log({ ...data, ...some }, 'rikaz..................///////////////////')
   const handleSave = () => {
     setEditMode(false);
     onEdit?.();
@@ -41,144 +41,92 @@ export default function ReportParagraph({
     const tokens = JSON.parse(safeLocalStorage.getItem("tokens") || "{}");
     return tokens.accessToken;
   };
-  console.log(getTokens())
-
-    const postPDF = async (pdf: jsPDF, reportName: "GRI" | "IFRS") => {
-    try {
-      // Convert PDF to Blob
-      const pdfBlob = pdf.output('blob');
-      
-      // Create FormData
-      const formData = new FormData();
-      formData.append('reportName', reportName);
-      formData.append('file', pdfBlob, 'sustainability-report.pdf');
-      
-      const response = await postRequest(
-        `report-generation/createReportGeneration`,
-        formData,
-        '',
-        getTokens() as string
+  console.log(getTokens());
+  useEffect(() => {
+    const fetchBoundaires = async () => {
+      const response = await getRequest(
+        `boundaries/getBoundaries`,
+        getTokens()
       );
-      
       if (response.success) {
-        toast.success("Report generated successfully");
-      } else {
-        toast.error(response.message);
+        const arr = response.data.boundaries || [];
+        setSome((prev) => ({
+          reportingPeriod: arr[0].reportingPeriod.start,
+          companyName: arr[0].organizationId.name,
+        }));
       }
+    };
+    fetchBoundaires();
+    setCustomText(type === "GRI"
+      ? generateGRIReport({ ...data, ...some })
+      : generateIFRSReport({ ...data, ...some }))
+  }, []);
+ const handleDownloadPDF = async () => {
+  // Ensure we're in the browser environment
+  if (reportRef.current && typeof window !== "undefined") {
+    try {
+      // Dynamically import html2pdf only on client-side
+      const html2pdf = (await import("html2pdf.js")).default;
+      
+      const worker = html2pdf()
+        .from(reportRef.current)
+        .set({
+          margin: 10,
+          filename: "sustainability-report.pdf",
+          html2canvas: { scale: 1 },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        });
+
+      // Get the PDF as a Blob
+      const pdfBlob = await worker.output("blob");
+
+      // Trigger download
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sustainability-report.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      // Post the PDF to the server
+      await postPDF(pdfBlob, type);
     } catch (error) {
-      console.error('Error posting PDF:', error);
-      toast.error("Failed to upload report");
+      console.error("Error generating PDF:", error);
     }
-  };
+  }
+};
 
-  const handleDownloadPDF = async () => {
-    if (reportRef.current && typeof window !== "undefined") {
-      try {
-        // PDF setup - use standard A4 dimensions in mm
-        const pdf = new jsPDF("p", "mm", "a4");
-        const pageWidthMM = 210; // A4 width in mm
-        const pageHeightMM = 297; // A4 height in mm
-        const marginMM = 15; // Reduced margin for better space utilization
+// Modified to accept Blob directly
+const postPDF = async (pdfBlob: Blob, reportName: "GRI" | "IFRS") => {
+  try {
+    const formData = new FormData();
+    formData.append("reportName", reportName);
+    formData.append("file", pdfBlob, "sustainability-report.pdf");
 
-        // Calculate content area
-        const contentWidthMM = pageWidthMM - 2 * marginMM;
+    const response = await postRequest(
+      `report-generation/createReportGeneration`,
+      formData,
+      "",
+      getTokens() as string
+    );
 
-        // Get all sections
-        const sections = reportRef.current.querySelectorAll(".section");
-        let currentY = marginMM;
-
-        for (let i = 0; i < sections.length; i++) {
-          const section = sections[i] as HTMLElement;
-
-          // Create temporary container with proper scaling
-          const tempContainer = document.createElement("div");
-          document.body.appendChild(tempContainer);
-
-          // Preserve original styles while setting dimensions
-          tempContainer.style.cssText = `
-            position: absolute;
-            left: -9999px;
-            top: 0;
-            width: ${contentWidthMM}mm !important;
-            max-width: ${contentWidthMM}mm !important;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #000;
-            background-color: #ffffff;
-            padding: 10px;
-            margin: 0;
-            overflow: hidden;
-          `;
-
-          // Clone and preserve computed styles
-          const sectionClone = section.cloneNode(true) as HTMLElement;
-
-          // Preserve text styles
-          const computedStyles = window.getComputedStyle(section);
-          sectionClone.style.fontFamily = computedStyles.fontFamily;
-          sectionClone.style.fontSize = computedStyles.fontSize;
-          sectionClone.style.lineHeight = computedStyles.lineHeight;
-          sectionClone.style.color = computedStyles.color;
-          sectionClone.style.backgroundColor = computedStyles.backgroundColor;
-          sectionClone.style.padding = computedStyles.padding;
-          sectionClone.style.margin = computedStyles.margin;
-
-          tempContainer.appendChild(sectionClone);
-
-          // Render to canvas with proper scaling
-          const canvas = await html2canvas(tempContainer, {
-            scale: 3, // Higher resolution for better text quality
-            useCORS: true,
-            allowTaint: true,
-            logging: false,
-            backgroundColor: "#ffffff",
-            width: tempContainer.offsetWidth,
-            height: tempContainer.offsetHeight,
-            windowWidth: tempContainer.scrollWidth,
-            windowHeight: tempContainer.scrollHeight,
-          });
-
-          // Cleanup temporary container
-          document.body.removeChild(tempContainer);
-
-          // Calculate proportional height
-          const imgWidth = canvas.width;
-          const imgHeight = canvas.height;
-          const ratio = imgWidth / contentWidthMM;
-          const sectionHeightMM = imgHeight / ratio;
-
-          // Page break handling
-          if (currentY + sectionHeightMM > pageHeightMM - marginMM) {
-            pdf.addPage();
-            currentY = marginMM;
-          }
-
-          // Add to PDF with exact dimensions
-          pdf.addImage(
-            canvas.toDataURL("image/jpeg", 0.92),
-            "JPEG",
-            marginMM,
-            currentY,
-            contentWidthMM,
-            sectionHeightMM
-          );
-
-          currentY += sectionHeightMM + 5; // Small spacing between sections
-        }
-
-        postPDF(pdf, type);
-        pdf.save("sustainability-report.pdf");
-      } catch (error) {
-        console.error("Error generating PDF:", error);
-      }
+    if (response.success) {
+      toast.success("Report generated successfully");
+    } else {
+      toast.error(response.message);
     }
-  };
+  } catch (error) {
+    console.error("Error posting PDF:", error);
+    toast.error("Failed to upload report");
+  }
+};
 
   return (
-    <div className="absolute inset-0 bg-white shadow-lg rounded-lg p-8 overflow-auto">
+    <div className="absolute top-12 rounded-lg p-8 overflow-auto no-scrollbar bg-white shadow-xl w-[80%] left-1/5">
       {/* Edit / Save Button */}
-      <div className="absolute top-4 left-4 z-10">
+      <div className="sticky top-4 left-4 z-10">
         {editMode ? (
           <button
             className="bg-green-800 text-white px-4 py-2 rounded hover:bg-green-700 outline-0"

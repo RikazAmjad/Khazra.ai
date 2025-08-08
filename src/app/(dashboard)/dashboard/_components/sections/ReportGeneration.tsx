@@ -109,20 +109,27 @@ export default function ReportGeneration() {
   };
   const [tableRows, setTableRows] = useState<TableRows[]>([]);
   const [loading, setLoading] = useState(false);
-  //   const handleDropdown = (e: ChangeEvent<HTMLSelectElement>) => {
-  //     const { name, value } = e.target;
-  //     setFormData((prev) => ({
-  //       ...prev,
-  //       [name]: value,
-  //     }));
-  //   }
 
   useEffect(() => {
     const getTokens = () => {
       const tokens = JSON.parse(safeLocalStorage.getItem("tokens") || "{}");
       return tokens.accessToken;
     };
-    
+    const fetchBoundaires = async () => {
+      const response = await getRequest(
+        `boundaries/getBoundaries`,
+        getTokens()
+      );
+      if (response.success) {
+        const arr = response.data.boundaries || [];
+        setReportData((prev) => ({
+          ...prev,
+          reportingPeriod: arr[0].reportingPeriod.start,
+          companyName: arr[0].organizationId.name,
+        }));
+      }
+    };
+
     const fetchReports = async () => {
       setLoading(true);
       try {
@@ -131,52 +138,44 @@ export default function ReportGeneration() {
           getTokens() as string
         );
         console.log(response, "response from get Report generation API");
-        
+
         if (response.success) {
           const arr = response.data.reportGeneration || [];
           const formattedRows = arr.map((ar: any) => ({
-            url: ar.reportFile?.url || '',
-            reportName: ar.reportName || '',
-            firstName: ar.createdBy?.firstName || '',
+            url: ar.reportFile?.url || "",
+            reportName: ar.reportName || "",
+            firstName: ar.createdBy?.firstName || "",
             createdAt: new Date(ar.createdAt).toLocaleDateString(),
-            _id: ar._id || '',
+            _id: ar._id || "",
           }));
           setTableRows(formattedRows);
         } else {
-          console.error('Failed to fetch reports:', response.message);
+          console.error("Failed to fetch reports:", response.message);
           setTableRows([]);
         }
       } catch (error) {
-        console.error('Error fetching reports:', error);
+        console.error("Error fetching reports:", error);
         setTableRows([]);
       } finally {
         setLoading(false);
       }
     };
-
+// fetchBoundaires();
     fetchReports();
   }, []);
-console.log(tableRows, "tableRows");
-
-  const dataTableRows = [
-    {
-      reportLink:
-        "https://res.cloudinary.com/dekpssbm1/image/upload/v1754573167/user-reports/okspta5twsrvcd265yvf.pdf",
-      createdBy: "Muhammad Husnain",
-      createdAt: "08-08-2025",
-    },
-  ];
-
+  // console.log(tableRows, "tableRows");
+  // console.log("parsed:", reportData)
+console.log(reportData, 'reportData..............,,,,,,,,,,,,,,,,,')
   const handleViewReport = (row: any, index: number) => {
     console.log("View row:", row);
     if (row.url) {
       // Open the report URL in a new tab
-      window.open(row.url, '_blank');
+      window.open(row.url, "_blank");
     }
   };
 
   return (
-    <div className="h-screen p-4 relative">
+    <div className="h-[90%]">
       <h1 className="text-3xl font-bold mb-6">Report Generation</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -223,7 +222,6 @@ console.log(tableRows, "tableRows");
               { key: "reportName", label: "Report Name" },
               { key: "firstName", label: "Report Creator" },
               { key: "createdAt", label: "Report Date" },
-              
             ]}
             rowKey="_id"
             actions={[
@@ -232,9 +230,7 @@ console.log(tableRows, "tableRows");
                 onClick: (row) =>
                   handleViewReport(
                     row,
-                    tableRows.findIndex(
-                      (item) => item._id === row._id
-                    )
+                    tableRows.findIndex((item) => item._id === row._id)
                   ),
                 variant: "success",
               },

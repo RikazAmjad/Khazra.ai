@@ -1,6 +1,7 @@
 'use client';
 
 import { ChangeEvent, FormEvent } from 'react';
+import { safeLocalStorage } from "@/utils/localStorage";
 
 type ReportType = 'GRI' | 'IFRS';
 
@@ -134,10 +135,30 @@ const SelectInput = ({
 );
 
 export default function ReportModal({ type, onClose, onSubmit, data, handleChange }: ReportModalProps) {
-    const handleSubmit = (e: FormEvent) => {
-        e.preventDefault();
-        onSubmit({ ...data, type });
+    const getUserDetails = () => {
+        const userDetails = safeLocalStorage.getItem('user');
+        if (!userDetails) return { departmentsNames: '', contactDetails: '' };
+
+        try {
+            const parsed = JSON.parse(userDetails);
+            
+
+            return {
+                departmentsNames: parsed?.department?.name ?? '',
+                contactDetails: parsed?.email ?? '',
+            };
+        } catch (err) {
+            console.error('Invalid user JSON:', err);
+            return { departmentsNames: '', contactDetails: '' };
+        }
     };
+
+
+    const handleSubmit = () => {
+        const { departmentsNames, contactDetails } = getUserDetails();
+        onSubmit({ ...data, departmentsNames, contactDetails, type });
+    };
+
 
     return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -178,10 +199,6 @@ export default function ReportModal({ type, onClose, onSubmit, data, handleChang
                         <TextInput label="Transition Risk Scenarios" name="transitionRiskScenarios" value={data.transitionRiskScenarios} onChange={handleChange} required />
                         <TextInput label="Innovative Facility" name="innovativeFacility" value={data.innovativeFacility} onChange={handleChange} required />
                         <TextInput label="Tools Used" name="toolsUsed" value={data.toolsUsed} onChange={handleChange} required />
-                        <TextInput label="Reporting Period" name="reportingPeriod" value={data.reportingPeriod} onChange={handleChange} required />
-                        <TextInput label="Company Name" name="companyName" value={data.companyName} onChange={handleChange} required />
-                        <TextInput label="Departments Names" name="departmentsNames" value={data.departmentsNames} onChange={handleChange} required />
-                        <TextInput label="Contact Details" name="contactDetails" value={data.contactDetails} onChange={handleChange} required />
                         <SelectInput label="Industry" name="industry" value={data.industry} onChange={handleChange} options={industries} required />
                     </div>
 
