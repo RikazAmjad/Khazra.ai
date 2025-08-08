@@ -3,6 +3,25 @@
 import { ChangeEvent, useState } from 'react';
 import ReportModal from './ReportModal';
 import Report from './ReportPage';
+import Table from '@/components/Table';
+import { Download, Edit3, View } from 'lucide-react';
+// import Table from './Table';
+
+interface TableProps {
+    title?: string;
+    columns: {
+        key: string;
+        label: string;
+        render?: (value: any, row: any) => React.ReactNode;
+    }[];
+    data: any[];
+    rowKey?: string;
+    onRowClick?: (row: any) => void; // <-- Add this line
+    showAddButton?: boolean;
+    addButtonLabel?: string;
+    onAddClick?: () => void;
+    showSearch?: boolean;
+}
 
 export interface ReportFormData {
     type: "GRI" | "IFRS";
@@ -40,12 +59,20 @@ export interface ReportFormData {
     reportingPeriod: string;
     companyName: string;
     departmentsNames: string;
+    contactDetails: string;
 }
+
+const dataTableRows = [
+    {reportLink: 'https://res.cloudinary.com/dekpssbm1/image/upload/v1754573167/user-reports/okspta5twsrvcd265yvf.pdf', createdBy: 'Muhammad Husnain', createdAt: '08-08-2025',},
+];
 
 export default function ReportGeneration() {
     const [type, setType] = useState<'GRI' | 'IFRS' | null>(null);
     const [reportData, setReportData] = useState<ReportFormData | null>(null);
+    const [tableData, setTableData] = useState(dataTableRows);
+
     const [formData, setFormData] = useState<ReportFormData>({
+        type: 'GRI',
         name: '',
         industry: '',
         location: '',
@@ -91,8 +118,12 @@ export default function ReportGeneration() {
         }));
     };
 
+    function handleEditMobile(row: any, arg1: any): void {
+        throw new Error('Function not implemented.');
+    }
+
     return (
-        <div className="h-screen p-4 relative">
+        <div className="h-[90%] p-4 relative">
             <h1 className="text-3xl font-bold mb-6">Report Generation</h1>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -123,8 +154,31 @@ export default function ReportGeneration() {
             </div>
 
             {/* Report History */}
-            <div className='border-t border-gray-100 my-8 shadow-lg p-4 rounded-lg'>
-                <p className='font-bold'>Recent Reports</p>
+            <div className='border-t border-gray-100 my-8 shadow-lg rounded-lg'>
+                <Table
+                    title="Recent Reports"
+                    data={tableData} 
+                    columns={[
+                        { key: 'reportLink', label: 'Link of Report' },
+                        { key: 'createdBy', label: 'Report Creator' },
+                        { key: 'createdAt', label: 'Report Date' },
+                    ]}
+                    rowKey="reportLink"
+                    actions={[
+                        {
+                            // label: 'Edit',
+                            icon: <View className="w-4 h-4 cursor-pointer" />,
+                            onClick: (row) => handleEditMobile(row, tableData.findIndex(item => item.reportLink === row._id)),
+                            variant: 'success'
+                        },
+                        // {
+                        //     // label: 'Delete',
+                        //     icon: <Download className="w-4 h-4 cursor-pointer" />,
+                        //     onClick: (row) => console.log('Delete row:', row),
+                        //     variant: 'primary'
+                        // }
+                    ]}
+                    />
             </div>
 
             {type && (
@@ -147,7 +201,7 @@ export default function ReportGeneration() {
                     <Report 
                         data={reportData} 
                         onEdit={() => {
-                            setFormData(reportData);
+                            // setFormData(reportData);
                             setType(reportData.type as 'GRI' | 'IFRS');
                         }} 
                         onClose={() => setReportData(null)} 

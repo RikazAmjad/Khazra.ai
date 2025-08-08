@@ -31,7 +31,7 @@ export default function ReportParagraph({ data, onClose, onEdit, viewMode }: Rep
           .set({
             margin: 10,
             filename: 'sustainability-report.pdf',
-            html2canvas: { scale: 2 },
+            html2canvas: { scale: 1 },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
           })
           .save();
@@ -43,7 +43,7 @@ export default function ReportParagraph({ data, onClose, onEdit, viewMode }: Rep
   };
 
   return (
-    <div className="absolute inset-0 bg-white shadow-lg rounded-lg p-8 overflow-auto">
+    <div className="absolute inset-0 bg-white shadow-lg rounded-lg p-8 overflow-auto ">
       {/* Edit / Save Button */}
       <div className="absolute top-4 left-4 z-10">
         {editMode ? (
