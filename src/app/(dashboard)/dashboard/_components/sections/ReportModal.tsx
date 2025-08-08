@@ -1,6 +1,7 @@
 'use client';
 
 import { ChangeEvent, FormEvent } from 'react';
+import { safeLocalStorage } from "@/utils/localStorage";
 
 type ReportType = 'GRI' | 'IFRS';
 
@@ -36,6 +37,10 @@ export interface ReportFormData {
     transitionRiskScenarios: string;
     innovativeFacility: string;
     toolsUsed: string;
+    reportingPeriod: string;
+    companyName: string;
+    departmentsNames: string;
+    contactDetails: string;
 }
 
 interface ReportModalProps {
@@ -130,10 +135,30 @@ const SelectInput = ({
 );
 
 export default function ReportModal({ type, onClose, onSubmit, data, handleChange }: ReportModalProps) {
-    const handleSubmit = (e: FormEvent) => {
-        e.preventDefault();
-        onSubmit({ ...data, type });
+    const getUserDetails = () => {
+        const userDetails = safeLocalStorage.getItem('user');
+        if (!userDetails) return { departmentsNames: '', contactDetails: '' };
+
+        try {
+            const parsed = JSON.parse(userDetails);
+            
+
+            return {
+                departmentsNames: parsed?.department?.name ?? '',
+                contactDetails: parsed?.email ?? '',
+            };
+        } catch (err) {
+            console.error('Invalid user JSON:', err);
+            return { departmentsNames: '', contactDetails: '' };
+        }
     };
+
+
+    const handleSubmit = () => {
+        const { departmentsNames, contactDetails } = getUserDetails();
+        onSubmit({ ...data, departmentsNames, contactDetails, type });
+    };
+
 
     return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
