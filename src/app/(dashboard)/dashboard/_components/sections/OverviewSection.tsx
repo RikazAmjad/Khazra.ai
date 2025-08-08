@@ -56,6 +56,9 @@ export default function OverviewSection() {
     totalFacilities: number;
     totalVehicles: number;
     recentActivities: any[];
+    stationaryCombustionEmissions: number;
+    mobileCombustionEmissions: number;
+    createdAt?: string;
   }>({
     dataQuality: 0,
     emissionByEquipment: 0,
@@ -71,12 +74,15 @@ export default function OverviewSection() {
     totalFacilities: 0,
     totalVehicles: 0,
     recentActivities: [],
+    stationaryCombustionEmissions: 0,
+    mobileCombustionEmissions: 0,
+    createdAt: "",
   });
 
   const getDashboard = async () => {
     try {
       const response = await getRequest(
-        `dashboard/getDashboardData/${getOrgId()}`,
+        `dashboard/getDashboardData`,
         getTokens()
       );
 
@@ -97,24 +103,22 @@ export default function OverviewSection() {
     if (!data.recentActivities) return [];
 
     return data.recentActivities.map((activity, index) => ({
-      _id: activity.stationary?._id || `activity-${index}`,
-      date: new Date(
-        activity.stationary?.updatedAt || activity.stationary?.createdAt
-      ).toLocaleDateString("en-US", {
+      _id: activity._id || `activity-${index}`,
+      date: new Date(activity.createdAt).toLocaleDateString("en-US", {
         year: "numeric",
         month: "short",
         day: "numeric",
       }),
-      activity: `${activity.stationary?.scopeType} ${activity.message}`,
-      scope: activity.stationary?.scope || "Scope 1",
+      activity: `${activity.scopeType} ${activity.scope} emissions`,
+      scope: activity.scope || "Scope 1",
       impact:
-        activity.stationary?.totalEmissions > 100
+        activity.totalEmissions > 1000
           ? "High"
-          : activity.stationary?.totalEmissions > 50
+          : activity.totalEmissions > 100
           ? "Medium"
           : "Low",
-      status: activity.success ? "Completed" : "Failed",
-      statusType: activity.success ? "success" : "error",
+      status: "Completed",
+      statusType: "success",
       originalData: activity,
     }));
   };
@@ -185,11 +189,11 @@ export default function OverviewSection() {
           sources: [
             {
               name: "Stationary Combustion",
-              amount: `${data.scope1Emissions.toFixed(1)} t CO₂e`,
+              amount: `${data.stationaryCombustionEmissions.toFixed(1)} t CO₂e`,
             },
             {
               name: "Mobile Combustion",
-              amount: `${data.emissionByVehicle.toFixed(1)} t CO₂e`,
+              amount: `${data.mobileCombustionEmissions.toFixed(1)} t CO₂e`,
             },
             // { name: "Fugitive Emissions", amount: "0.0 t CO₂e" },
             // { name: "Process Emissions", amount: "0.0 t CO₂e" },
@@ -306,11 +310,11 @@ export default function OverviewSection() {
           sources: [
             {
               name: "Stationary Combustion",
-              amount: `${data.emissionByFacility.toFixed(1)} t CO₂e`,
+              amount: `${data.stationaryCombustionEmissions.toFixed(1)} t CO₂e`,
             },
             {
               name: "Mobile Combustion",
-              amount: `${data.emissionByVehicle.toFixed(1)} t CO₂e`,
+              amount: `${data.mobileCombustionEmissions.toFixed(1)} t CO₂e`,
             },
             { name: "Fugitive Emissions", amount: "0.0 t CO₂e" },
             { name: "Process Emissions", amount: "0.0 t CO₂e" },
@@ -424,7 +428,12 @@ export default function OverviewSection() {
 
       <div className="xl:flex gap-5 space-y-3 items-center w-full">
         <div className="xl:w-2/3 h-[580px]">
-          <ScopeChartData title="📊 Emission Trends by Scope" />
+          <ScopeChartData 
+            title="📊 Emission Trends by Scope" 
+            scope1Emissions={data.scope1Emissions}
+            scope2Emissions={data.scope2Emissions}
+            createdAt={data.createdAt}
+          />
         </div>
         <div className="xl:w-1/3 h-[590px]">
           <ProgressChart overallProgressValue={overallProgressValue} />
@@ -441,15 +450,28 @@ export default function OverviewSection() {
         ))}
       </div>
       <div className="w-full xl:flex space-y-5 justify-between gap-5">
-        <HorizontalStackedChart title="🔥 Emissions by Vehicle" />
-        <HorizontalStackedChart title="🔥 Emissions by Equipments" />
+        <HorizontalStackedChart 
+          title="🔥 Emissions by Vehicle" 
+          emissionData={data.emissionByVehicle}
+          createdAt={data.createdAt}
+        />
+        <HorizontalStackedChart 
+          title="🔥 Emissions by Equipments" 
+          emissionData={data.emissionByEquipment}
+          createdAt={data.createdAt}
+        />
       </div>
       <div className="xl:flex gap-5 space-y-5 w-full">
         <div className="xl:w-1/3 h-full">
           <ProgressChart overallProgressValue={overallProgressValue} />
         </div>
         <div className="h-[580px] flex xl:w-2/3 w-full">
-          <ScopeChartData title="📊 Emissions by Facility" />
+          <ScopeChartData 
+            title="📊 Emissions by Facility" 
+            scope1Emissions={data.emissionByFacility}
+            scope2Emissions={data.emissionByFacility * 0.1}
+            createdAt={data.createdAt}
+          />
         </div>
       </div>
 
