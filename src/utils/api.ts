@@ -91,34 +91,34 @@ export const postRequest = async (
     console.log(response.data);
     if (response.status >= 200 && response.status < 300) {
       console.log("post request whole response.", response);
-      if (dashboard) {
-        await axios.put(
-          `${BASE_URLs}dashboard/updateDashboardData/${organizationId}`,
-          {
-            recentActivities: response.data,
-            totalEmissions: scope
-              ? response.data[scope]?.totalEmissions || 0
-              : 0,
-            stationaryCombustionEmissions:
-              (scope === "stationary" &&
-                response.data[scope]?.stationaryCombustionEmissions) ||
-              0,
-            mobileCombustionEmissions:
-              (scope === "mobile" &&
-                response.data[scope]?.mobileCombustionEmissions) ||
-              0,
-            previousYearStationaryEmissions: 1746.2,
-            previousYearMobileEmissions: 1746.2,
-            currentEmissionYear: scope
-              ? response.data[scope]?.stationaryCombustionEmissions ||
-                0 + response.data[scope]?.mobileCombustionEmissions ||
-                0
-              : 0,
-            previousEmissionsYear: 1999,
-          },
-          { headers: getHeaders(token) }
-        );
-      }
+      // if (dashboard) {
+      //   await axios.put(
+      //     `${BASE_URLs}dashboard/updateDashboardData/${organizationId}`,
+      //     {
+      //       recentActivities: response.data,
+      //       totalEmissions: scope
+      //         ? response.data[scope]?.totalEmissions || 0
+      //         : 0,
+      //       stationaryCombustionEmissions:
+      //         (scope === "stationary" &&
+      //           response.data[scope]?.stationaryCombustionEmissions) ||
+      //         0,
+      //       mobileCombustionEmissions:
+      //         (scope === "mobile" &&
+      //           response.data[scope]?.mobileCombustionEmissions) ||
+      //         0,
+      //       previousYearStationaryEmissions: 1746.2,
+      //       previousYearMobileEmissions: 1746.2,
+      //       currentEmissionYear: scope
+      //         ? response.data[scope]?.stationaryCombustionEmissions ||
+      //           0 + response.data[scope]?.mobileCombustionEmissions ||
+      //           0
+      //         : 0,
+      //       previousEmissionsYear: 1999,
+      //     },
+      //     { headers: getHeaders(token) }
+      //   );
+      // }
       return response.data;
     } else {
       throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
