@@ -58,8 +58,8 @@ export const getRequest = async (
   }
 };
 
-const organization = JSON.parse(safeLocalStorage.getItem("user") || "{}");
-const organizationId = organization.organization;
+// const organization = JSON.parse(safeLocalStorage.getItem("user") || "{}");
+// const organizationId = organization.organization;
 
 export const postRequest = async (
   endPoint: string,
